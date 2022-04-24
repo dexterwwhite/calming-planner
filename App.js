@@ -1,8 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
 import React, {useState} from 'react';
-import { StyleSheet, Text, View, TextInput,KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput,KeyboardAvoidingView, Platform, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { Keyboard } from 'react-native-web';
 import Task from './components/Task';
+import * as ImagePicker from 'expo-image-picker';
+import { format } from "date-fns";
 
 export default function App() {
   const [task, setTask] = useState();  /*set task */
@@ -18,15 +20,124 @@ export default function App() {
   const completeTask = (index) =>{
     let itemsCopy = [...taskItems];  //copy a new array
     itemsCopy.splice(index, 1);  //remove that item
-    setTaskItems(itemsCopy);  
+    setTaskItems(itemsCopy);
   }
 
+  //for image picker
+  const [selectedImage, setSelectedImage] = React.useState(null);
+
+  let openImagePickerAsync = async () => {
+      let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permissionResult.granted === false) {
+        alert('Permission to access camera roll is required!');
+        return;
+      }
+
+      let pickerResult = await ImagePicker.launchImageLibraryAsync();
+
+      if (pickerResult.cancelled === true) {
+        return;
+      }
+
+      setSelectedImage({ localUri: pickerResult.uri });
+    };
+
+    //for time display
+    const [time, setTime] = React.useState();
+
+    const [todImage, setTodImage] = React.useState(null);
+    const TODImages = {
+      daytimeImage: require("./graphics/daytimeArt.png"),
+      nighttimeImage: require("./graphics/nighttimeArt.png"),
+    }
+
+    React.useEffect(() => {
+      const timer = setInterval(() => {
+
+        let currentTime = new Date();
+        setTime(format(currentTime, "MMMM do, yyy h:mm a"));
+
+        if (currentTime.getHours() >= 6 && currentTime.getHours() < 18){
+          if(todImage != TODImages.daytimeImage)
+            setTodImage(TODImages.daytimeImage);
+        }
+        else{
+          if(todImage != TODImages.nighttimeImage)
+            setTodImage(TODImages.nighttimeImage);
+        }
+      }, 1000);
+
+      return () => {
+        clearInterval(timer);
+      };
+    }, []);
+
+    //for username displa
+    const [tmpusername, setTmpusername] = React.useState();
+
+    const [username, setUsername] = React.useState();
+
+    const handleAddUsername = () => {
+      setUsername(tmpusername);
+    }
+
+    //initialize planner to user
+    if (username == null || username == ''){
+      return(
+        <View style={styles.centeredMessage}>
+          <Text>
+            Hello!
+            {'\n'}
+            Please tell us your name.
+          </Text>
+          <KeyboardAvoidingView
+            behavior = {Platform.OS == "ios" ? "padding": "height"}
+            style = {styles.writeTaskWrapper}>
+            <TextInput style = {styles.input} placeholder={'Enter your name here'} value = {tmpusername} onChangeText = {text =>setTmpusername(text)} />
+            <TouchableOpacity onPress = {() => handleAddUsername()}>
+              <View style = {styles.addWrapper}>
+                <Text style = {styles.addText}>+</Text>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </View>
+      );
+    }
+    if (selectedImage == null) {
+      return (
+        <View style={styles.centeredMessage}>
+          <Text>
+            Please tap the + to select a picture of yourself from your phone's files.
+            {'\n'}
+          </Text>
+
+          <TouchableOpacity onPress={openImagePickerAsync} style={styles.button}>
+            <View style = {styles.addWrapper}>
+              <Text style = {styles.addText}>+</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
   return (
     <View style={styles.container}>
 
+      {/*header thing*/}
+
+      <View style={styles.topper}>
+        <View style={styles.topperImages}>
+          <Image source={todImage} style={styles.todimage} resizeMode="contain"/>
+          <Image source={{ uri: selectedImage.localUri }} style={styles.selfphoto}/>
+        </View>
+        <Text style = {styles.timeText}>{time}</Text>
+        <Text style = {styles.userText}>{username}'s Planner </Text>
+      </View>
+
       {/* Planner*/}
       <View style = {styles.tasksWrapper}>
+
         <Text style = {styles.sectionTitle}>Calming Planner App</Text>
 
         <View style = {styles.items}>
@@ -111,4 +222,53 @@ const styles = StyleSheet.create({
   addText:{
 
   },
+  topper: {
+    width: '100%',
+    height: 165,
+    backgroundColor: 'white'
+  },
+  topperImages: {
+    width: '100%',
+    height: 165,
+    backgroundColor: 'white'
+  },
+  selfphoto: {
+    flex: 1,
+    resizeMode: 'contain',
+    zIndex: 1,
+    marginTop: -165,
+    marginLeft: 140,
+    zIndex: 0,
+  },
+  todimage: {
+    flex: 1,
+    height: undefined,
+    width: undefined,
+    zIndex: 1,
+  },
+  timeText: {
+    marginTop: -65,
+    fontSize:20,
+    fontWeight: "bold",
+    color: 'white',
+    textShadowColor : 'black',
+    textShadowOffset : {width: 2, height: 2},
+    textShadowRadius : 1,
+  },
+  userText: {
+    marginTop: 0,
+    fontSize: 25,
+    color: 'white',
+    textAlign: 'right',
+    textShadowColor : 'black',
+    textShadowOffset : {width: 2, height: 2},
+    textShadowRadius : 1,
+  },
+  centeredMessage: {
+    flex: 1,
+    paddingHorizontal: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+  }
 });
