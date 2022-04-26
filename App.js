@@ -6,6 +6,9 @@ import Task from './components/Task';
 import * as ImagePicker from 'expo-image-picker';
 import { format } from "date-fns";
 
+const windowWidth = Dimensions.get('window').width;
+const topperFactor = (windowWidth/360);
+
 export default function App() {
   const [task, setTask] = useState();  /*set task */
 
@@ -223,21 +226,17 @@ const styles = StyleSheet.create({
 
   },
   topper: {
-    width: '100%',
-    height: 165,
-    backgroundColor: 'white'
+    width: 360*topperFactor,
+    height: 165*topperFactor,
   },
   topperImages: {
     width: '100%',
-    height: 165,
-    backgroundColor: 'white'
+    height: '100%',
   },
   selfphoto: {
     flex: 1,
-    resizeMode: 'contain',
-    zIndex: 1,
-    marginTop: -165,
-    marginLeft: 140,
+    marginTop: -165*topperFactor,
+    marginLeft: 180*topperFactor,
     zIndex: 0,
   },
   todimage: {
@@ -247,22 +246,23 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   timeText: {
-    marginTop: -65,
-    fontSize:20,
+    marginTop: -65*topperFactor,
+    fontSize:20*topperFactor,
     fontWeight: "bold",
     color: 'white',
     textShadowColor : 'black',
     textShadowOffset : {width: 2, height: 2},
     textShadowRadius : 1,
+    zIndex: 2,
   },
   userText: {
-    marginTop: 0,
-    fontSize: 25,
+    fontSize: 25*topperFactor,
     color: 'white',
     textAlign: 'right',
     textShadowColor : 'black',
     textShadowOffset : {width: 2, height: 2},
     textShadowRadius : 1,
+    zIndex: 2,
   },
   centeredMessage: {
     flex: 1,
