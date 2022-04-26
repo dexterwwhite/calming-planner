@@ -1,20 +1,41 @@
 import { StatusBar } from 'expo-status-bar';
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import { StyleSheet, Text, View, TextInput,KeyboardAvoidingView, Platform, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { Keyboard } from 'react-native-web';
 import Task from './components/Task';
 import * as ImagePicker from 'expo-image-picker';
 import { format } from "date-fns";
+//import SQLite from 'react-native-sqlite-storage';
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabase('MainDB');
 
 const windowWidth = Dimensions.get('window').width;
 const topperFactor = (windowWidth/360);
 
 export default function App() {
+
   const [task, setTask] = useState();  /*set task */
 
   const [taskItems, setTaskItems] = useState([]);  /*array to store all the task*/
 
   const handleAddTask = () => {
+    //Add task to database
+    let time = "12:00";
+    let date = "Monday";
+    let completed = 0;
+    try {
+      db.transaction( (tx) => {
+         tx.executeSql(
+          "INSERT INTO Tasks (Name, Time, Date, Completed) VALUES (?,?,?,?)",
+          [task, time, date, completed]
+        );
+      })
+    } catch(error) {
+      console.log(error);
+    }
+    console.log("Added?");
+
     //Keyboard.dismss();  /*make the keyboard go back down after typing in the task */
     setTaskItems([...taskItems, task])  /*append the new task to the already exist task array */
     setTask(null);
@@ -24,6 +45,123 @@ export default function App() {
     let itemsCopy = [...taskItems];  //copy a new array
     itemsCopy.splice(index, 1);  //remove that item
     setTaskItems(itemsCopy);
+  }
+
+  //Either creates tables for user or simply logs them in
+  useEffect(() => {
+    createTaskTable();
+    createUserTable();
+    //loadTasks();
+    updateUserInfo();
+    //deleteTable();
+  }, []);
+
+  const tester = () => {
+    try {
+      console.log("tester");
+      db.transaction((tx) => {
+        tx.executeSql('SHOW TABLES', [], (tx, results) => {
+          for (let i = 0; i < results.rows.length; ++i) {
+            console.log(results.rows.item(i));
+          }
+        })
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  const loadTasks = () => {
+    console.log("load tasks");
+    try {
+      db.transaction((tx) => {
+        tx.executeSql(
+          "SELECT * FROM Tasks",
+          [],
+          (tx, results) => {
+            var len = results.rows.length;
+            console.log("Completed");
+            if(len > 0) {
+              console.log("len is " + len);
+            } else {
+              console.log("no rows right now");
+            }
+          }
+        )
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  /**
+   * Database stuff
+   */
+  const createTaskTable = () => {
+    console.log("create task table");
+    try {
+      db.transaction((tx) => {
+        tx.executeSql("CREATE TABLE IF NOT EXISTS Tasks(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Time TEXT, Date TEXT, Completed INTEGER)", []);
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  //Only used to delete a table
+  const deleteTable = () => {
+    try {
+      db.transaction((tx) => {
+        tx.executeSql(
+          "DROP TABLE User;"
+        )
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  //Database for user name and image
+  //DO NOT DO UNTIL I HAVE FIGURED OUT IMAGES
+  const createUserTable = () => {
+    try{
+      db.transaction((tx) => {
+        tx.executeSql("CREATE TABLE IF NOT EXISTS User(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Uri TEXT)", []);
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  const updateUserInfo = () => {
+    try {
+      db.transaction((tx) => {
+        tx.executeSql(
+          "SELECT * FROM User",
+          [],
+          (tx, results) => {
+            var len = results.rows.length;
+            if(len > 0) {
+              try {
+                console.log("user len = ", len);
+                console.log("rez: ", results.rows.item(0));
+                var dbUserName = results.rows.item(0).Name;
+                setUsername(dbUserName);
+                var img = results.rows.item(0).Uri;
+                if(img != "null") {
+                  console.log("success");
+                  setSelectedImage({ localUri: img });
+                }
+              } catch(error2) {
+                console.log(error2)
+              }
+            }
+          }
+        )
+      })
+    } catch(error) {
+      console.log(error);
+    }
   }
 
   //for image picker
@@ -43,7 +181,19 @@ export default function App() {
         return;
       }
 
+      //Add picker result URI to database
+      try {
+        db.transaction((tx) => {
+          tx.executeSql("UPDATE User SET Uri=? WHERE ID=1", [pickerResult.uri]);
+        })
+      } catch(error) {
+        console.log(error);
+      }
+
       setSelectedImage({ localUri: pickerResult.uri });
+      
+      //Add image URI to database
+
     };
 
     //for time display
@@ -82,6 +232,21 @@ export default function App() {
     const [username, setUsername] = React.useState();
 
     const handleAddUsername = () => {
+      //Add user to database with username
+      let emptyImage = "null";
+      if(tmpusername) {
+        try {
+          db.transaction( (tx) => {
+            tx.executeSql(
+              "INSERT INTO User (Name, Uri) VALUES (?,?)",
+              [tmpusername, emptyImage]
+            );
+          })
+        } catch(error) {
+          console.log(error);
+        }
+        console.log("Added User");
+      }
       setUsername(tmpusername);
     }
 
