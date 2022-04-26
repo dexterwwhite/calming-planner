@@ -47,10 +47,11 @@ export default function App() {
   //Either creates tables for user or simply logs them in
   useEffect(() => {
     createTaskTable();
-    loadTasks();
-    //tester();
-    setUsername("peepeepoopoo");
-  });
+    createUserTable();
+    //loadTasks();
+    updateUserInfo();
+    //deleteTable();
+  }, []);
 
   const tester = () => {
     try {
@@ -109,7 +110,7 @@ export default function App() {
     try {
       db.transaction((tx) => {
         tx.executeSql(
-          "DROP TABLE Tasks;"
+          "DROP TABLE User;"
         )
       })
     } catch(error) {
@@ -120,13 +121,44 @@ export default function App() {
   //Database for user name and image
   //DO NOT DO UNTIL I HAVE FIGURED OUT IMAGES
   const createUserTable = () => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        "CREATE TABLE IF NOT EXISTS "
-        + "User "
-        + "(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Time TEXT, Date TEXT);"
-      )
-    })
+    try{
+      db.transaction((tx) => {
+        tx.executeSql("CREATE TABLE IF NOT EXISTS User(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Uri TEXT)", []);
+      })
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
+  const updateUserInfo = () => {
+    try {
+      db.transaction((tx) => {
+        tx.executeSql(
+          "SELECT * FROM User",
+          [],
+          (tx, results) => {
+            var len = results.rows.length;
+            if(len > 0) {
+              try {
+                console.log("user len = ", len);
+                console.log("rez: ", results.rows.item(0));
+                var dbUserName = results.rows.item(0).Name;
+                setUsername(dbUserName);
+                var img = results.rows.item(0).Uri;
+                if(img != "null") {
+                  console.log("success");
+                  setSelectedImage({ localUri: img });
+                }
+              } catch(error2) {
+                console.log(error2)
+              }
+            }
+          }
+        )
+      })
+    } catch(error) {
+      console.log(error);
+    }
   }
 
   //for image picker
@@ -146,7 +178,19 @@ export default function App() {
         return;
       }
 
+      //Add picker result URI to database
+      try {
+        db.transaction((tx) => {
+          tx.executeSql("UPDATE User SET Uri=? WHERE ID=1", [pickerResult.uri]);
+        })
+      } catch(error) {
+        console.log(error);
+      }
+
       setSelectedImage({ localUri: pickerResult.uri });
+      
+      //Add image URI to database
+
     };
 
     //for time display
@@ -185,6 +229,21 @@ export default function App() {
     const [username, setUsername] = React.useState();
 
     const handleAddUsername = () => {
+      //Add user to database with username
+      let emptyImage = "null";
+      if(tmpusername) {
+        try {
+          db.transaction( (tx) => {
+            tx.executeSql(
+              "INSERT INTO User (Name, Uri) VALUES (?,?)",
+              [tmpusername, emptyImage]
+            );
+          })
+        } catch(error) {
+          console.log(error);
+        }
+        console.log("Added User");
+      }
       setUsername(tmpusername);
     }
 
